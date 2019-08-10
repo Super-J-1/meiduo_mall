@@ -1,6 +1,16 @@
-from django.shortcuts import render
+import re
 
+from django.contrib.auth import login
+# from django.http import HttpResponse, HttpResponseForbidden
+from django_redis import get_redis_connection
+
+from meiduo_mall.utils.response_code import RETCODE
+from .models import User
+from django.db import DatabaseError
+from django.shortcuts import render
+from django import http
 # Create your views here.
+# from django.utils import http
 from django.views.generic.base import View
 
 
@@ -11,4 +21,59 @@ class RegisterView(View):
         return render(request, 'register.html')
 
     def post(self, request):
-        pass
+        request_dict = request.POST
+        username = request_dict.get('username')
+        password = request_dict.get('password')
+        password2 = request_dict.get('password2')
+        mobile = request_dict.get('mobile')
+        sms_code = request_dict.get('sms_code')
+        allow = request_dict.get('allow')
+        if not all([username, password, password2, mobile, sms_code, allow]):
+            return http.HttpResponseForbidden('缺少必传参数')
+        if not re.match(r'^[a-zA-Z0-9_-]{5,20}$',username):
+            return http.HttpResponseForbidden('请输入5-20个字符的用户名')
+        if not re.match(r'^[0-9A-Za-z]{8,20}$', password):
+            return http.HttpResponseForbidden('请输入8-20位的密码')
+        if password != password2:
+            return http.HttpResponseForbidden('两次输入的密码不一致')
+        if not re.match(r'^1[3-9]\d{9}$',mobile):
+            return http.HttpResponseForbidden('请输入正确的手机号码')
+        if allow != 'on':
+            return http.HttpResponseForbidden('🙏请勾选用户协议')
+            # 创建redis连接
+        redis_conn = get_redis_connection('verify_codes')
+        # print(redis_conn)
+        # 获取短信验证码
+        sms_code_server_bytes = redis_conn.get('sms_%s' % mobile)
+        print(sms_code_server_bytes)
+        # 从redis数据库删除
+        redis_conn.delete('sms_%s' % mobile)
+        # 判断redis中是否取到短信证码
+        if sms_code_server_bytes is None:
+            return http.JsonResponse({'code': RETCODE.SMSCODERR, 'errmsg': '图形验证码失效'})
+
+        sms_code_server = sms_code_server_bytes.decode()
+        # 判断短信验证码
+        if sms_code != sms_code_server:
+            return http.JsonResponse({'code': RETCODE.SMSCODERR, 'errmsg': '图形验证码输入错误'})
+        try:
+            User.objects.create_user(username = username, password = password, mobile = mobile)
+
+        except DatabaseError:
+            return render(request,'register.html',{'register_errmsg': '注册失败'})
+
+        return http.HttpResponse('注册成功')
+
+
+class UsernameCountView(View):
+    '''判断用户名是否存在'''
+    def get(self, request, username):
+        count = User.objects.filter(username = username).count()
+        return http.JsonResponse({'count': count})
+
+
+class MobileCountView(View):
+    """判断手机号是否重复注册"""
+    def get(self, request, mobile):
+        count = User.objects.filter(mobile=mobile).count()
+        return http.JsonResponse({'count': count})
