@@ -1,15 +1,14 @@
 import random
 
 from django import http
-from django.shortcuts import render
 from django_redis import get_redis_connection
 # Create your views here.
 from django.views.generic.base import View
 from meiduo_mall.libs.captcha.captcha import captcha
-from meiduo_mall.libs.yuntongxun.sms import CCP
+# from celery_tasks.sms.yuntongxun.sms import CCP
 from meiduo_mall.utils.response_code import RETCODE
 from verifications.constants import IMAGE_CODE_EXPIRE
-
+from celery_tasks.sms.tasks import send_sms_code
 
 class ImageCodeView(View):
     '''图形验证'''
@@ -53,6 +52,7 @@ class SMSCodeView(View):
 
         # 随机短信验证码
         sms_code = '%06d' % random.randint(0,999999)
+        # sms_code = 123456
         # 创建管道
         pl = redis_conn.pipeline()
         # 将短信验证码缓存到redis
@@ -64,5 +64,6 @@ class SMSCodeView(View):
         # 执行
         pl.execute()
         # 发送短信
-        CCP().send_template_sms(mobile,[sms_code, 5], 1)
+        # CCP().send_template_sms(mobile,[sms_code, 5], 1)
+        send_sms_code.delay(mobile, sms_code)
         return http.JsonResponse({'code':RETCODE.OK, 'errmsg':'OK'})

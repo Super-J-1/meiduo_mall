@@ -1,13 +1,13 @@
 import re
 
-from django.contrib.auth import login
+from django.contrib.auth import login, authenticate
 # from django.http import HttpResponse, HttpResponseForbidden
 from django_redis import get_redis_connection
 
 from meiduo_mall.utils.response_code import RETCODE
 from .models import User
 from django.db import DatabaseError
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django import http
 # Create your views here.
 # from django.utils import http
@@ -42,26 +42,26 @@ class RegisterView(View):
             return http.HttpResponseForbidden('🙏请勾选用户协议')
             # 创建redis连接
         redis_conn = get_redis_connection('verify_codes')
-        # print(redis_conn)
-        # 获取短信验证码
+        print(redis_conn)
+        # # 获取短信验证码
         sms_code_server_bytes = redis_conn.get('sms_%s' % mobile)
         print(sms_code_server_bytes)
-        # 从redis数据库删除
+        # # 从redis数据库删除
         redis_conn.delete('sms_%s' % mobile)
-        # 判断redis中是否取到短信证码
+        # # 判断redis中是否取到短信证码
         if sms_code_server_bytes is None:
             return http.JsonResponse({'code': RETCODE.SMSCODERR, 'errmsg': '图形验证码失效'})
-
+        #
         sms_code_server = sms_code_server_bytes.decode()
-        # 判断短信验证码
+        # # 判断短信验证码
         if sms_code != sms_code_server:
             return http.JsonResponse({'code': RETCODE.SMSCODERR, 'errmsg': '图形验证码输入错误'})
-        try:
-            User.objects.create_user(username = username, password = password, mobile = mobile)
+        # try:
+        user = User.objects.create_user(username = username, password = password, mobile = mobile)
 
-        except DatabaseError:
-            return render(request,'register.html',{'register_errmsg': '注册失败'})
-
+        # except DatabaseError:
+        #     return render(request,'register.html',{'register_errmsg': '注册失败'})
+        login(request, user)
         return http.HttpResponse('注册成功')
 
 
@@ -77,3 +77,24 @@ class MobileCountView(View):
     def get(self, request, mobile):
         count = User.objects.filter(mobile=mobile).count()
         return http.JsonResponse({'count': count})
+
+
+class LoginView(View):
+    '''用户登录'''
+    def get(self, request):
+        '''提供登录界面'''
+        return render(request, 'login.html')
+    def post(self, request):
+        '''登录功能'''
+        request_dict = request.POST
+        username = request_dict.get('username')
+        password = request_dict.get('password')
+        remembered = request_dict.get('remembered')
+
+        user = authenticate(request, username = username, password = password)
+        if user is None:
+            return render(request, 'login.html', {'account_errmsg': '用户名或密码错误'})
+        login(request, user)
+        if remembered is None:
+            request.session.set_expiry(0)
+        return http.HttpResponse('成功')
