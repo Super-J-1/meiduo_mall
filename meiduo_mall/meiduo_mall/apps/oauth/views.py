@@ -111,3 +111,4 @@ class QQAuthUserView(View):
         response = redirect(next)
         response.set_cookie('username', user.username, max_age = settings.SESSION_COOKIE_AGE)
         return response
+
