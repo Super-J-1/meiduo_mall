@@ -51,8 +51,8 @@ class SMSCodeView(View):
             return http.JsonResponse({'code': RETCODE.IMAGECODEERR, 'errmsg': '图形验证码输入错误'})
 
         # 随机短信验证码
-        sms_code = '%06d' % random.randint(0,999999)
-        # sms_code = 123456
+        # sms_code = '%06d' % random.randint(0,999999)
+        sms_code = 123456
         # 创建管道
         pl = redis_conn.pipeline()
         # 将短信验证码缓存到redis

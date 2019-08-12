@@ -1,7 +1,10 @@
 import re
 
-from django.contrib.auth import login, authenticate
+from django.conf import settings
+from django.contrib.auth import login, authenticate, mixins
 # from django.http import HttpResponse, HttpResponseForbidden
+from django.contrib.auth.views import logout
+from django.urls import reverse
 from django_redis import get_redis_connection
 
 from meiduo_mall.utils.response_code import RETCODE
@@ -62,8 +65,9 @@ class RegisterView(View):
         # except DatabaseError:
         #     return render(request,'register.html',{'register_errmsg': '注册失败'})
         login(request, user)
-        return http.HttpResponse('注册成功')
-
+        response = redirect('/')
+        response.set_cookie('username', username, max_age = settings.SESSION_COOKIE_AGE)
+        return response
 
 class UsernameCountView(View):
     '''判断用户名是否存在'''
@@ -84,6 +88,26 @@ class LoginView(View):
     def get(self, request):
         '''提供登录界面'''
         return render(request, 'login.html')
+    '''
+    def post(self, request):
+        
+        request_dict = request.POST
+        username = request_dict.get('username')
+        password = request_dict.get('password')
+        remembered = request_dict.get('remembered')
+        if re.match(r'^1[3-9]\d{9}$', username):
+            User.USERNAME_FIELD = 'mobile'
+        user = authenticate(request, username = username, password = password)
+        User.USERNAME_FIELD = 'username'
+        if user is None:
+            return render(request, 'login.html', {'account_errmsg': '用户名或密码错误'})
+        login(request, user)
+        if remembered is None:
+            request.session.set_expiry(0)
+        return redirect('/')
+
+    '''
+
     def post(self, request):
         '''登录功能'''
         request_dict = request.POST
@@ -92,9 +116,38 @@ class LoginView(View):
         remembered = request_dict.get('remembered')
 
         user = authenticate(request, username = username, password = password)
+
         if user is None:
             return render(request, 'login.html', {'account_errmsg': '用户名或密码错误'})
         login(request, user)
         if remembered is None:
             request.session.set_expiry(0)
-        return http.HttpResponse('成功')
+        next = request.GET.get('next')
+        response = redirect(next or '/')
+        response.set_cookie('username', username, max_age = (None if remembered is None else settings.SESSION_COOKIE_AGE))
+
+        return response
+
+
+class LogoutView(View):
+    '''退出登录'''
+    def get(self, request):
+
+        logout(request)
+        response = redirect('/login/')
+        response.delete_cookie('username')
+        return response
+
+# class InfoView(View):
+#     '''用户中心'''
+#     def get(self, request):
+#         if request.user.is_authenticated:
+#             return render(request, 'user_center_info.html')
+#         else:
+#             return redirect('/login/?next=/info/')
+
+class InfoView(mixins.LoginRequiredMixin, View):
+# class InfoView(View):
+    '''用户中心'''
+    def get(self, request):
+        return render(request, 'user_center_info.html')
