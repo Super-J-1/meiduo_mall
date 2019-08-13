@@ -1,3 +1,4 @@
+import json
 import re
 
 from django.conf import settings
@@ -8,6 +9,7 @@ from django.urls import reverse
 from django_redis import get_redis_connection
 
 from meiduo_mall.utils.response_code import RETCODE
+from .utils import generate_email_verify
 from .models import User
 from django.db import DatabaseError
 from django.shortcuts import render, redirect
@@ -15,6 +17,8 @@ from django import http
 # Create your views here.
 # from django.utils import http
 from django.views.generic.base import View
+from meiduo_mall.utils.views import LoginRequired
+from celery_tasks.email.tasks import send_verify_url
 
 
 class RegisterView(View):
@@ -151,3 +155,23 @@ class InfoView(mixins.LoginRequiredMixin, View):
     '''用户中心'''
     def get(self, request):
         return render(request, 'user_center_info.html')
+
+
+class EmailView(LoginRequired):
+    '''用户📫📫📫邮箱'''
+    def put(self, request):
+        json_dict = json.loads(request.body.decode())
+        email = json_dict.get('email')
+
+        if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+            return http.HttpResponseForbidden('邮箱格式不正确')
+
+        user = request.user
+        user.email = email
+        user.save()
+        # from django.core.mail import send_mail
+        # send_mail(subject = '美多商城', message = '', from_email = '美多商城<itcast99@163.com>', recipient_list = [email],html_message = '<a href="http://www.baidu.com">百度<a>')
+        verify_url = generate_email_verify(user)
+        send_verify_url.delay(email, verify_url)
+
+        return http.JsonResponse({'code':RETCODE.OK, 'errmsg':'OK'})

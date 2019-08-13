@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib.auth.backends import ModelBackend
 import re
 from .models import User
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 
 def get_user_by_account(account):
     try:
@@ -22,3 +24,10 @@ class UsernameMobileAuthBackend(ModelBackend):
         user = get_user_by_account(username)
         if user and user.check_password(password):
             return user
+
+def generate_email_verify(user):
+    serializer = Serializer(settings.SECRET_KEY, 3600*24)
+    data = {'user_id': user.id, 'email':user.email}
+    token = serializer.dumps(data).decode()
+    verify_url = settings.EMAIL_VERIFY_URL + '?token=' + token
+    return verify_url

@@ -215,3 +215,10 @@ LOGIN_URL = '/login/'
 QQ_CLIENT_ID = '101518219'
 QQ_CLIENT_SECRET = '418d84ebdc7241efb79536886ae95224'
 QQ_REDIRECT_URI = 'http://www.meiduo.site:8000/oauth_callback'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_PORT = 25
+EMAIL_HOST = 'smtp.163.com'
+EMAIL_HOST_USER = 'itcast99@163.com'
+EMAIL_HOST_PASSWORD = 'python99'
+EMAIL_FROM = '美多商城<itcast99@163.com>'

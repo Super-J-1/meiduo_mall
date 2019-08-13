@@ -13,12 +13,7 @@ def generate_openid_signature(openid):
 
 def check_openid_signature(openid_sign):
     serializer = Serializer(settings.SECRET_KEY, 600)
-    # serializer.dumps(数据), 返回bytes类型
-    # token = serializer.dumps({'mobile': '18512345678'})
-    # token = token.decode()
-    # 检验token
-    # 验证失败，会抛出itsdangerous.BadData异常
-    # serializer = Serializer(settings.SECRET_KEY, 300)
+
     try:
         data = serializer.loads(openid_sign)
     except BadData:
