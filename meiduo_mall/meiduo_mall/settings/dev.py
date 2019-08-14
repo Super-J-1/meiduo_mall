@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'verifications.apps.VerificationsConfig',
     'oauth.apps.OauthConfig',
+    'areas.apps.AreasConfig',
 ]
 
 MIDDLEWARE = [
@@ -222,3 +223,5 @@ EMAIL_HOST = 'smtp.163.com'
 EMAIL_HOST_USER = 'itcast99@163.com'
 EMAIL_HOST_PASSWORD = 'python99'
 EMAIL_FROM = '美多商城<itcast99@163.com>'
+
+EMAIL_VERIFY_URL = 'http://www.meiduo.site:8000/emails/verification/'

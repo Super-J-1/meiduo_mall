@@ -6,7 +6,7 @@ from celery_tasks.main import celery_app
 
 # logger = logging.getLogger('django')
 
-@celery_app.task(name = 'send_verify_url', retry_backoff = 3)
+@celery_app.task(name = 'send_verify_url')
 def send_verify_url(to_email, verify_url):
     subject = '美多商城邮箱验证'
     html_message = '<p>尊敬的用户你好！</p>' \

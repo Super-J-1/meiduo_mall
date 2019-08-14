@@ -10,4 +10,9 @@ urlpatterns = [
     url(r'^logout/$',views.LogoutView.as_view()),
     url(r'^info/$',views.InfoView.as_view()),
     url(r'^emails/$',views.EmailView.as_view()),
+    url(r'^emails/verification/$',views.VerifyEmailView.as_view()),
+    url(r'^addresses/$',views.AddressView.as_view()),
+    url(r'^addresses/create/$',views.CreateAddressView.as_view()),
+    url(r'^addresses/(?P<address_id>\d+)/$', views.UpdateDestroyAddressView.as_view()),
+    url(r'^addresses/(?P<address_id>\d+)/default/$', views.DefaultAddressView.as_view()),
 ]
